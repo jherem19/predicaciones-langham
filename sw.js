@@ -11,7 +11,6 @@ const urlsToCache = [
   'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
   'https://esm.sh/react@^19.1.0',
-  'https://esm.sh/@google/genai@^1.10.0',
   'https://esm.sh/react-dom@^19.1.0/'
 ];
 

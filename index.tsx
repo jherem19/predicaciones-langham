@@ -1,6 +1,5 @@
 import React, { useState, useRef, ChangeEvent, MouseEvent, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
-import { GoogleGenAI } from "@google/genai";
 
 // Type declarations for global libraries
 declare global {
@@ -61,7 +60,7 @@ const App = () => {
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
+        navigator.serviceWorker.register('/sw.js')
           .then(registration => {
             console.log('ServiceWorker registration successful with scope: ', registration.scope);
           })
@@ -72,28 +71,30 @@ const App = () => {
     }
   }, []);
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setSermonData(prev => ({ ...prev, [name]: value }));
   };
   
   const getAISuggestion = async (prompt: string): Promise<string> => {
-      if (!process.env.API_KEY) {
-          alert("API key no está configurada. Por favor, configura la variable de entorno API_KEY.");
-          return "";
-      }
       setIsLoading(true);
       try {
-          const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
+          const apiResponse = await fetch('/api/generate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ prompt: prompt }),
           });
-          return response.text;
+          
+          if (!apiResponse.ok) {
+              const errorData = await apiResponse.json();
+              throw new Error(errorData.error || `Server error: ${apiResponse.status}`);
+          }
+  
+          const data = await apiResponse.json();
+          return data.text || "";
       } catch (error) {
           console.error("Error fetching AI suggestion:", error);
-          alert("Hubo un error al obtener la sugerencia. Revisa la consola para más detalles.");
+          alert(`Hubo un error al obtener la sugerencia: ${error.message}`);
           return "";
       } finally {
           setIsLoading(false);
@@ -117,11 +118,19 @@ const App = () => {
           
           let responseText = '';
           try {
-              const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: prompt,
+              const apiResponse = await fetch('/api/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: prompt }),
               });
-              responseText = response.text;
+
+              if (!apiResponse.ok) {
+                const errorData = await apiResponse.json();
+                throw new Error(errorData.error || `Server error: ${apiResponse.status}`);
+              }
+              
+              const data = await apiResponse.json();
+              responseText = data.text || "";
               
               let cleanedText = responseText.replace(/^```json\s*/, '').replace(/```$/, '').trim();
               const parsed = JSON.parse(cleanedText);

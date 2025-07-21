@@ -2,7 +2,7 @@
   "name": "Asistente de Sermones",
   "short_name": "Sermones",
   "description": "Una guía paso a paso para la preparación de sermones bíblicos.",
-  "start_url": ".",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#f9fafb",
   "theme_color": "#3b82f6",

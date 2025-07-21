@@ -1,0 +1,9 @@
+{
+  "name": "sermon-assistant-functions",
+  "version": "1.0.0",
+  "description": "Backend functions for the sermon assistant",
+  "main": "generate.js",
+  "dependencies": {
+    "@google/genai": "^1.10.0"
+  }
+}
