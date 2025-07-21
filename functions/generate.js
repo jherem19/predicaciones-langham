@@ -51,7 +51,7 @@ exports.handler = async function(event) {
     
     const generationRequest = {
         model: 'gemini-2.5-flash',
-        contents: [{ parts: [{ text: prompt }] }],
+        contents: prompt,
     };
 
     if (config) {
