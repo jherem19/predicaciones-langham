@@ -177,19 +177,24 @@ const App = () => {
   };
 
   const downloadPdf = async () => {
-    if (typeof window.html2canvas !== 'function') {
-        alert("La librería de generación de PDF (html2canvas) no se cargó correctamente. Por favor, recarga la página e inténtalo de nuevo.");
-        console.error("html2canvas is not available or not a function", window.html2canvas);
+    if (typeof window.html2canvas !== 'function' || !window.jspdf?.jsPDF) {
+        alert("Las librerías para generar el PDF no se cargaron correctamente. Por favor, revisa tu conexión a internet, desactiva cualquier bloqueador de anuncios y recarga la página.");
+        console.error("PDF generation libraries not available:", { html2canvas: typeof window.html2canvas, jspdf: typeof window.jspdf });
         return;
     }
-    const { jsPDF } = window.jspdf;
+
     const content = sermonContentRef.current;
-    if (!content) return;
+    if (!content) {
+        alert("Error: No se pudo encontrar el contenido del sermón para generar el PDF.");
+        return;
+    }
 
     alert("Se generará un PDF con el contenido del sermón. Este proceso puede tardar unos segundos.");
+    
+    const { jsPDF } = window.jspdf;
 
     try {
-        const canvas = await window.html2canvas(content, { scale: 2 });
+        const canvas = await window.html2canvas(content, { scale: 2, useCORS: true });
         const pdf = new jsPDF('p', 'mm', 'a4');
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();

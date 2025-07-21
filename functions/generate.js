@@ -49,16 +49,19 @@ exports.handler = async function(event) {
 
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
-    // If a response schema is part of the config, process it before sending to the API
-    if (config && config.responseSchema) {
-      convertSchemaTypes(config.responseSchema);
+    const generationRequest = {
+        model: 'gemini-2.5-flash',
+        contents: [{ parts: [{ text: prompt }] }],
+    };
+
+    if (config) {
+        if (config.responseSchema) {
+            convertSchemaTypes(config.responseSchema);
+        }
+        generationRequest.config = config;
     }
     
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-        config: config, // Pass the potentially modified config
-    });
+    const response = await ai.models.generateContent(generationRequest);
     
     const text = response.text;
 
