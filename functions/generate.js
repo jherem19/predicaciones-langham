@@ -7,7 +7,7 @@ exports.handler = async function(event) {
   }
 
   try {
-    const { prompt } = JSON.parse(event.body);
+    const { prompt, config } = JSON.parse(event.body);
 
     if (!prompt) {
       return { statusCode: 400, body: JSON.stringify({ error: 'Prompt is required' }) };
@@ -22,6 +22,7 @@ exports.handler = async function(event) {
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: prompt,
+        config: config,
     });
     
     const text = response.text;

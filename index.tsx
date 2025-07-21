@@ -76,23 +76,30 @@ const App = () => {
     setSermonData(prev => ({ ...prev, [name]: value }));
   };
   
-  const getAISuggestion = async (prompt: string): Promise<string> => {
+  const getAISuggestion = async (prompt: string, config?: object): Promise<string> => {
       setIsLoading(true);
       try {
-          const apiResponse = await fetch('/api/generate', {
+          const body = { prompt, ...(config && { config }) };
+          const apiResponse = await fetch('/.netlify/functions/generate', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ prompt: prompt }),
+              body: JSON.stringify(body),
           });
           
           if (!apiResponse.ok) {
-              const errorData = await apiResponse.json();
-              throw new Error(errorData.error || `Server error: ${apiResponse.status}`);
+              let errorData;
+              try {
+                  errorData = await apiResponse.json();
+              } catch(e) {
+                  const textError = await apiResponse.text();
+                  throw new Error(textError || `Server error: ${apiResponse.status}`);
+              }
+              throw new Error(errorData?.error || `Server error: ${apiResponse.status}`);
           }
   
           const data = await apiResponse.json();
           return data.text || "";
-      } catch (error) {
+      } catch (error: any) {
           console.error("Error fetching AI suggestion:", error);
           alert(`Hubo un error al obtener la sugerencia: ${error.message}`);
           return "";
@@ -114,32 +121,39 @@ const App = () => {
   const handleNext = async () => {
       if (step === 1 && sermonData.passage) {
           setIsFetchingPassage(true);
-          const prompt = `Busca el siguiente pasaje bíblico: "${sermonData.passage}". Provee el texto en dos versiones: Reina-Valera 1960 (RVR1960) y Nueva Traducción Viviente (NTV). Formatea tu respuesta estrictamente como un objeto JSON con las claves "rvr1960" y "ntv". No incluyas nada más en tu respuesta, solo el objeto JSON.`;
+          const prompt = `Busca el siguiente pasaje bíblico: "${sermonData.passage}". Provee el texto en dos versiones: Reina-Valera 1960 (RVR1960) y Nueva Traducción Viviente (NTV).`;
           
-          let responseText = '';
+          const biblePassageConfig = {
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: "OBJECT",
+              properties: {
+                rvr1960: {
+                  type: "STRING",
+                  description: "El texto del pasaje en la versión Reina-Valera 1960."
+                },
+                ntv: {
+                  type: "STRING",
+                  description: "El texto del pasaje en la versión Nueva Traducción Viviente."
+                },
+              },
+              required: ["rvr1960", "ntv"],
+            },
+          };
+          
           try {
-              const apiResponse = await fetch('/api/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: prompt }),
-              });
-
-              if (!apiResponse.ok) {
-                const errorData = await apiResponse.json();
-                throw new Error(errorData.error || `Server error: ${apiResponse.status}`);
+              const responseText = await getAISuggestion(prompt, biblePassageConfig);
+              if (!responseText) {
+                  throw new Error("La respuesta de la IA estaba vacía.");
               }
               
-              const data = await apiResponse.json();
-              responseText = data.text || "";
-              
-              let cleanedText = responseText.replace(/^```json\s*/, '').replace(/```$/, '').trim();
-              const parsed = JSON.parse(cleanedText);
+              const parsed = JSON.parse(responseText);
               setPassageText({
                   rvr1960: parsed.rvr1960 || 'No se pudo encontrar la versión RVR1960.',
                   ntv: parsed.ntv || 'No se pudo encontrar la versión NTV.'
               });
-          } catch (e) {
-              console.error("Failed to parse Bible passage response:", e, "Raw response:", responseText);
+          } catch (e: any) {
+              console.error("Failed to fetch or parse Bible passage response:", e);
               setPassageText({
                   rvr1960: 'No se pudo obtener el pasaje en RVR1960. Inténtelo de nuevo.',
                   ntv: 'No se pudo obtener el pasaje en NTV.'
