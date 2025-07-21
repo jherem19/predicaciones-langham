@@ -87,14 +87,15 @@ const App = () => {
           });
           
           if (!apiResponse.ok) {
-              let errorData;
+              const errorText = await apiResponse.text();
+              let errorMessage = errorText;
               try {
-                  errorData = await apiResponse.json();
-              } catch(e) {
-                  const textError = await apiResponse.text();
-                  throw new Error(textError || `Server error: ${apiResponse.status}`);
+                  const errorJson = JSON.parse(errorText);
+                  errorMessage = errorJson.error || errorMessage;
+              } catch (e) {
+                  // Not a JSON error, use the raw text.
               }
-              throw new Error(errorData?.error || `Server error: ${apiResponse.status}`);
+              throw new Error(errorMessage || `Server error: ${apiResponse.status}`);
           }
   
           const data = await apiResponse.json();
