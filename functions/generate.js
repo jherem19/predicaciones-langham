@@ -1,4 +1,34 @@
-const { GoogleGenAI } = require("@google/genai");
+const { GoogleGenAI, Type } = require("@google/genai");
+
+/**
+ * Recursively traverses a JSON schema and replaces string representations of 'type'
+ * with the corresponding enum values from the GoogleGenAI SDK.
+ * This is necessary because the schema comes from a client-side JSON object.
+ * @param {object} schemaPart - The part of the schema to process.
+ */
+function convertSchemaTypes(schemaPart) {
+  if (!schemaPart) {
+    return;
+  }
+
+  // Replace string type with enum if it exists in the SDK's Type enum
+  if (schemaPart.type && typeof schemaPart.type === 'string' && Type[schemaPart.type]) {
+    schemaPart.type = Type[schemaPart.type];
+  }
+
+  // Recurse for nested properties
+  if (schemaPart.properties) {
+    for (const key in schemaPart.properties) {
+      convertSchemaTypes(schemaPart.properties[key]);
+    }
+  }
+
+  // Recurse for array items
+  if (schemaPart.items) {
+    convertSchemaTypes(schemaPart.items);
+  }
+}
+
 
 exports.handler = async function(event) {
   // Only allow POST requests
@@ -19,10 +49,15 @@ exports.handler = async function(event) {
 
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
+    // If a response schema is part of the config, process it before sending to the API
+    if (config && config.responseSchema) {
+      convertSchemaTypes(config.responseSchema);
+    }
+    
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: prompt,
-        config: config,
+        config: config, // Pass the potentially modified config
     });
     
     const text = response.text;
@@ -37,7 +72,7 @@ exports.handler = async function(event) {
     console.error('Error in serverless function:', error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Failed to generate AI content' })
+      body: JSON.stringify({ error: error.message || 'Failed to generate AI content' })
     };
   }
 };
